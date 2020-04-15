@@ -2,8 +2,11 @@ import BuildInfo._
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+addCommandAlias("to211", "set scalaVersion in ThisBuild := \"2.11.12\"")
+addCommandAlias("to212", "set scalaVersion in ThisBuild := \"2.12.11\"")
+addCommandAlias("to213", "set scalaVersion in ThisBuild := \"2.13.1\"")
 
-val compilerOpts = Seq(
+val compilerOpts211 = Seq(
   "-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-encoding", // Specify character encoding
   "utf-8", // used by source files.
@@ -17,7 +20,6 @@ val compilerOpts = Seq(
   "-Xcheckinit", // Wrap field accessors to throw an exception on uninitialized access.
   "-Xfatal-warnings", // Fail the compilation if there are any warnings.
   "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
-  "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
   "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
   "-Xlint:doc-detached", // A Scaladoc comment appears to be detached from its element.
   "-Xlint:inaccessible", // Warn about inaccessible types in method signatures.
@@ -32,18 +34,29 @@ val compilerOpts = Seq(
   "-Xlint:stars-align", // Pattern sequence wildcard must align with sequence component.
   "-Xlint:type-parameter-shadow", // A local type parameter shadows a type already in scope.
   "-Ywarn-dead-code", // Warn when dead code is identified.
-  "-Ywarn-extra-implicit", // Warn when more than one implicit parameter section is defined.
   "-Ywarn-numeric-widen", // Warn when numerics are widened.
+  "-Ywarn-value-discard", // Warn when non-Unit expression results are unused.
+)
+
+val compilerOpts212 = Seq(
+  "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
   "-Ywarn-macros:after", // Only inspect expanded trees when generating unused symbol warnings.
-  "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
-  "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
   "-Ywarn-unused:locals", // Warn if a local definition is unused.
   "-Ywarn-unused:params", // Warn if a value parameter is unused.
+  "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
   "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
   "-Ywarn-unused:privates", // Warn if a private member is unused.
-  "-Ywarn-value-discard", // Warn when non-Unit expression results are unused.
-  "-Ymacro-annotations"
+  "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
+  "-Ywarn-extra-implicit" // Warn when more than one implicit parameter section is defined.
 )
+
+val compilerOpts212Only = Seq(
+  "-Xlint:unsound-match",             // Pattern match may not be typesafe.
+  "-Xlint:by-name-right-associative", // By-name parameter of right associative operator.
+  "-Xfuture"                          // Turn on future language features.
+)
+
+val compilerOpts213 = Seq("-Ymacro-annotations")
 
 inThisBuild(
   Seq(
@@ -57,21 +70,21 @@ inThisBuild(
 
 val bm4           = "0.3.1"
 val kindProjector = "0.11.0"
-val silencer      = "1.6.0"
+//val silencer      = "1.4.2"
 
 val bm4Plugin           = "com.olegpy"      %% "better-monadic-for" % bm4
 val kindProjectorPlugin = "org.typelevel"   % "kind-projector"      % kindProjector cross CrossVersion.full
-val silencerPlugin      = "com.github.ghik" %% "silencer-plugin"     % silencer cross CrossVersion.full
-val silencerLib         = "com.github.ghik" % "silencer-lib"        % silencer % Provided cross CrossVersion.full
+//val silencerPlugin      = "com.github.ghik" %% "silencer-plugin"    % silencer cross CrossVersion.full
+//val silencerLib         = "com.github.ghik" %% "silencer-lib"       % silencer % Provided cross CrossVersion.full
 
 val commonSettings = Seq(
   parallelExecution in Test := false,
-  scalacOptions := compilerOpts,
-
+  scalacOptions := compilerOpts211,
   scalacOptions in compile in Compile ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, y)) if y >= 12 => Seq("-Ymacro-annotations")
-    case _ => Nil
-  })
+        case Some((2, 13)) => compilerOpts212 ++ compilerOpts213
+        case Some((2, 12)) => compilerOpts212 ++ compilerOpts212Only
+        case _                       => Nil
+      })
 )
 
 lazy val core = project
@@ -80,12 +93,12 @@ lazy val core = project
     scalafmtOnCompile := true,
     name := "mongo-core",
     version := "0.1.0",
-    scalacOptions ++= compilerOpts
+    scalacOptions ++= compilerOpts211
   )
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++=
-        silencerLib +: Seq(silencerPlugin, kindProjectorPlugin, bm4Plugin).map(compilerPlugin)
+        /*silencerLib +: */Seq(/*silencerPlugin, */kindProjectorPlugin, bm4Plugin).map(compilerPlugin)
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
   .withBuildInfo
