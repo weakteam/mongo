@@ -1,12 +1,12 @@
 import BuildInfo._
+import Dependencies._
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("fmtCheck", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
-addCommandAlias("to211", "set scalaVersion in ThisBuild := \"2.11.12\"")
 addCommandAlias("to212", "set scalaVersion in ThisBuild := \"2.12.11\"")
 addCommandAlias("to213", "set scalaVersion in ThisBuild := \"2.13.1\"")
 
-val compilerOpts211 = Seq(
+val compilerOpts212 = Seq(
   "-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-encoding", // Specify character encoding
   "utf-8", // used by source files.
@@ -36,9 +36,6 @@ val compilerOpts211 = Seq(
   "-Ywarn-dead-code", // Warn when dead code is identified.
   "-Ywarn-numeric-widen", // Warn when numerics are widened.
   "-Ywarn-value-discard", // Warn when non-Unit expression results are unused.
-)
-
-val compilerOpts212 = Seq(
   "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
   "-Ywarn-macros:after", // Only inspect expanded trees when generating unused symbol warnings.
   "-Ywarn-unused:locals", // Warn if a local definition is unused.
@@ -51,40 +48,52 @@ val compilerOpts212 = Seq(
 )
 
 val compilerOpts212Only = Seq(
-  "-Xlint:unsound-match",             // Pattern match may not be typesafe.
+  "-Xlint:unsound-match", // Pattern match may not be typesafe.
   "-Xlint:by-name-right-associative", // By-name parameter of right associative operator.
-  "-Xfuture"                          // Turn on future language features.
+  "-Xfuture" // Turn on future language features.
 )
 
 val compilerOpts213 = Seq("-Ymacro-annotations")
+
+lazy val setMinorVersion = minorVersion := {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, v)) => v.toInt
+    case _            => 0
+  }
+}
 
 inThisBuild(
   Seq(
     organization := "io.github.weakteam",
     scalaVersion := "2.13.1",
-    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.1"),
+    crossScalaVersions := Seq("2.12.11", "2.13.1"),
     cancelable in Global := true,
-    onChangedBuildSource in Global := ReloadOnSourceChanges
+    onChangedBuildSource in Global := ReloadOnSourceChanges,
+    setMinorVersion
   )
 )
 
-val bm4           = "0.3.1"
-val kindProjector = "0.11.0"
-//val silencer      = "1.4.2"
-
-val bm4Plugin           = "com.olegpy"      %% "better-monadic-for" % bm4
-val kindProjectorPlugin = "org.typelevel"   % "kind-projector"      % kindProjector cross CrossVersion.full
-//val silencerPlugin      = "com.github.ghik" %% "silencer-plugin"    % silencer cross CrossVersion.full
-//val silencerLib         = "com.github.ghik" %% "silencer-lib"       % silencer % Provided cross CrossVersion.full
-
 val commonSettings = Seq(
   parallelExecution in Test := false,
-  scalacOptions := compilerOpts211,
-  scalacOptions in compile in Compile ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, 13)) => compilerOpts212 ++ compilerOpts213
-        case Some((2, 12)) => compilerOpts212 ++ compilerOpts212Only
-        case _                       => Nil
-      })
+  scalacOptions := compilerOpts212,
+  scalacOptions in (Compile, compile) ++= {
+    minorVersion.value match {
+      case 13 => compilerOpts213
+      case 12 => compilerOpts212Only
+      case _  => Nil
+    }
+  },
+  scalacOptions in Test --= compilerOpts213,
+  libraryDependencies ++= {
+    minorVersion.value match {
+      case 13 => Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)
+      case 12 =>
+        Seq(
+          compilerPlugin(Dependencies.Plugins.macroParadise),
+          scalaOrganization.value % "scala-reflect" % scalaVersion.value
+        )
+    }
+  }
 )
 
 lazy val core = project
@@ -92,13 +101,12 @@ lazy val core = project
   .settings(
     scalafmtOnCompile := true,
     name := "mongo-core",
-    version := "0.1.0",
-    scalacOptions ++= compilerOpts211
+    version := "0.1.0"
   )
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++=
-        /*silencerLib +: */Seq(/*silencerPlugin, */kindProjectorPlugin, bm4Plugin).map(compilerPlugin)
+        Dependencies.Plugins.plugins ++ Dependencies.TestLibraries.testLibraries.map(_ % Test)
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
   .withBuildInfo
