@@ -1,4 +1,7 @@
 *.class
 *.log
-.idea/
+.idea
 **target
+.metals
+project/metals.sbt
+.bloop
