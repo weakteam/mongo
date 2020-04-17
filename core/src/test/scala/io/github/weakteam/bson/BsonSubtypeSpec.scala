@@ -32,7 +32,7 @@ class BsonSubtypeSpec extends AnyWordSpec with Matchers {
     }
 
     "return appropriate value for BsonSubtype" in {
-      show"$BsonSubtype" mustBe "BsonSubtype"
+      show"$BsonCryptSubtype" mustBe "BsonCryptSubtype"
     }
 
     "return appropriate value for UserDefinedSubtype" in {

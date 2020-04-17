@@ -11,7 +11,7 @@ object BsonSubtype {
   final case object UUIDSubtypeOld extends BsonSubtype
   final case object UUIDSubtype extends BsonSubtype
   final case object Md5Subtype extends BsonSubtype
-  final case object BsonSubtype extends BsonSubtype
+  final case object BsonCryptSubtype extends BsonSubtype
   final case class UserDefinedSubtype(value: Short) extends BsonSubtype
 
   implicit val bsonSubtypeShowInstance: Show[BsonSubtype] = {
@@ -21,7 +21,7 @@ object BsonSubtype {
     case UUIDSubtypeOld            => "BsonOldUUID"
     case UUIDSubtype               => "BsonUUID"
     case Md5Subtype                => "BsonMd5"
-    case BsonSubtype               => "BsonSubtype"
+    case BsonCryptSubtype          => "BsonCryptSubtype"
     case UserDefinedSubtype(value) => s"BsonUserDefined(value = $value)"
   }
 }
