@@ -7,12 +7,17 @@ object Dependencies {
     val scalaCheck    = "1.14.3"
     val scalaTest     = "3.1.1"
     val scalaTestPlus = "3.1.1.1"
+    val cats          = "2.1.1"
 
     val bm4           = "0.3.1"
     val kindProjector = "0.11.0"
     val silencer      = "1.6.0"
     val simulacrum    = "1.0.0"
     val macroParadise = "2.1.1"
+  }
+
+  object Libs {
+    val cats = "org.typelevel" %% "cats-core" % Versions.cats
   }
 
   object TestLibraries {

@@ -106,7 +106,9 @@ lazy val core = project
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++=
-        Dependencies.Plugins.plugins ++ Dependencies.TestLibraries.testLibraries.map(_ % Test)
+        Seq(Dependencies.Libs.cats) ++
+            Dependencies.Plugins.plugins ++
+            Dependencies.TestLibraries.testLibraries.map(_ % Test)
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
   .withBuildInfo
