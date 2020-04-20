@@ -106,7 +106,7 @@ lazy val core = project
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++=
-        Seq(Dependencies.Libs.cats) ++
+        Seq(Dependencies.Libs.cats, Dependencies.Libs.simulacrum) ++
             Dependencies.Plugins.plugins ++
             Dependencies.TestLibraries.testLibraries.map(_ % Test)
   )

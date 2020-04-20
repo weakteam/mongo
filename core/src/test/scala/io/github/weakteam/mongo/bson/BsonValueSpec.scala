@@ -1,9 +1,9 @@
-package io.github.weakteam.bson
+package io.github.weakteam.mongo.bson
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import cats.syntax.show._
-import io.github.weakteam.bson.BsonValue._
+import BsonValue._
 
 class BsonValueSpec extends AnyWordSpec with Matchers {
   "BsonValueShow" should {
