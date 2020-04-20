@@ -25,5 +25,11 @@ class BsonWriterSpec extends AnyWordSpec with Matchers {
       "".writeBson mustBe BsonInt(0)
       1L.writeBson mustBe BsonInt(0)
     }
+
+    "return right value with manual instance creation" in {
+      implicit val intBsonWriter: BsonWriter[Int] = BsonWriter.instance(BsonInt)
+
+      1.writeBson mustBe BsonInt(1)
+    }
   }
 }
