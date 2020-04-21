@@ -1,10 +1,10 @@
 package io.github.weakteam.mongo.bson
 
-import cats.data.NonEmptyList
 import cats.Applicative
 import cats.syntax.apply._
 import com.github.ghik.silencer.silent
-import io.github.weakteam.mongo.bson.BsonError.FlakyError
+import io.github.weakteam.mongo.bson.BsonError.TypeMismatch
+import io.github.weakteam.mongo.bson.BsonPath.EmptyBsonPath
 import io.github.weakteam.mongo.bson.BsonReaderResult._
 import simulacrum.typeclass
 
@@ -16,8 +16,11 @@ trait BsonReader[+A] {
 object BsonReader {
 
   @silent
-  def lift[A](pf: PartialFunction[BsonValue, A]): BsonReader[A] = { bson =>
-    pf.andThen(Success(_)).applyOrElse(bson, (_: BsonValue) => Failure(NonEmptyList.of(FlakyError)))
+  def lift[A: Class](pf: PartialFunction[BsonValue, A]): BsonReader[A] = { bson =>
+    pf.andThen(Success(_)).applyOrElse(
+      bson,
+      value => Failure(TypeMismatch[A](implicitly, value, EmptyBsonPath(), None))
+    )
   }
 
   implicit val bsonReaderApplicativeInstance: Applicative[BsonReader] = new Applicative[BsonReader] {
