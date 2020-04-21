@@ -1,4 +1,4 @@
-package io.github.weakteam.bson
+package io.github.weakteam.mongo.bson
 
 import cats.Show
 import cats.syntax.show._

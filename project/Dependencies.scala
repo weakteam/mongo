@@ -17,7 +17,8 @@ object Dependencies {
   }
 
   object Libs {
-    val cats = "org.typelevel" %% "cats-core" % Versions.cats
+    val cats       = "org.typelevel" %% "cats-core"  % Versions.cats
+    val simulacrum = "org.typelevel" %% "simulacrum" % Versions.simulacrum
   }
 
   object TestLibraries {
@@ -31,7 +32,6 @@ object Dependencies {
   object Plugins {
 
     val macroParadise       = "org.scalamacros" % "paradise"            % Versions.macroParadise cross CrossVersion.patch
-    val simulacrum          = "org.typelevel"   %% "simulacrum"         % Versions.simulacrum
     val bm4Plugin           = "com.olegpy"      %% "better-monadic-for" % Versions.bm4
     val kindProjectorPlugin = "org.typelevel"   % "kind-projector"      % Versions.kindProjector cross CrossVersion.patch
     val silencerPlugin      = "com.github.ghik" %% "silencer-plugin"    % Versions.silencer cross CrossVersion.full
