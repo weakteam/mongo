@@ -40,7 +40,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        scala: [2.12.11, 2.13.1]
     steps:
       - name: Checkout branch
         uses: actions/checkout@v2
@@ -61,7 +60,7 @@ jobs:
         uses: olafurpg/setup-scala@v5
 
       - name: Run tests & coverage
-        run: sbt ++${{matrix.scala}} clean coverage +test coverageReport
+        run: sbt clean coverage +test coverageReport
 
       - name: Codecov
         uses: codecov/codecov-action@v1
