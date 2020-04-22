@@ -82,17 +82,16 @@ class BsonValueSpec extends AnyWordSpec with Matchers {
     }
 
     "return appropriate value for BsonArray" in {
-      val bson = BsonArray(List(BsonString("test"), BsonDocument(Map("test" -> BsonInt(42)))))
+      val bson = BsonArray(BsonString("test"), BsonDocument("test" -> BsonInt(42)))
       show"$bson" mustBe "BsonArray(values = [BsonString(value = test), BsonDocument(values = {(key = test, value = BsonInt(value = 42))})])"
     }
 
     "return appropriate value for BsonDocument" in {
-      val bson = BsonDocument(Map("test" -> BsonInt(42), "list" -> BsonArray(List(BsonString("test")))))
+      val bson = BsonDocument("test" -> BsonInt(42), "list" -> BsonArray(BsonString("test")))
       show"$bson" mustBe "BsonDocument(values = {" +
         "(key = test, value = BsonInt(value = 42)), " +
         "(key = list, value = BsonArray(values = [BsonString(value = test)]))" +
         "})"
     }
-
   }
 }

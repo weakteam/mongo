@@ -28,6 +28,14 @@ object BsonValue {
   final case class BsonArray(value: List[BsonValue]) extends BsonValue
   final case class BsonDocument(value: Map[String, BsonValue]) extends BsonValue
 
+  object BsonArray {
+    def apply(values: BsonValue*): BsonArray = new BsonArray(List(values: _*))
+  }
+
+  object BsonDocument {
+    def apply(values: (String, BsonValue)*): BsonDocument = new BsonDocument(Map(values: _*))
+  }
+
   implicit lazy val bsonValueShowInstance: Show[BsonValue] = Show.show[BsonValue] {
     case BsonNull                      => "BsonNull"
     case BsonUndefined                 => "BsonUndefined"
