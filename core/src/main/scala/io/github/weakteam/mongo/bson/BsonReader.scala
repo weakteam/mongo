@@ -1,6 +1,7 @@
 package io.github.weakteam.mongo.bson
 
 import cats.Applicative
+import cats.data.Kleisli
 import cats.syntax.apply._
 import com.github.ghik.silencer.silent
 import io.github.weakteam.mongo.bson.BsonError.TypeMismatch
@@ -15,12 +16,15 @@ trait BsonReader[+A] {
 
 object BsonReader {
 
+  def kleisli[A](implicit R: BsonReader[A]): Kleisli[BsonReaderResult, BsonValue, A] = Kleisli(R.readBson)
+
   @silent
   def lift[A: Class](pf: PartialFunction[BsonValue, A]): BsonReader[A] = { bson =>
-    pf.andThen(Success(_)).applyOrElse(
-      bson,
-      value => Failure(TypeMismatch[A](implicitly, value, EmptyBsonPath(), None))
-    )
+    pf.andThen(Success(_))
+      .applyOrElse(
+        bson,
+        (value: BsonValue) => Failure(TypeMismatch("", value, EmptyBsonPath(), None))
+      )
   }
 
   implicit val bsonReaderApplicativeInstance: Applicative[BsonReader] = new Applicative[BsonReader] {

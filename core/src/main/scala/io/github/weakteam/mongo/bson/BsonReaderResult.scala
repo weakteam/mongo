@@ -1,11 +1,17 @@
 package io.github.weakteam.mongo.bson
 
 import cats.{Applicative, Eval, Traverse}
-import cats.data.{NonEmptyList => Nel}
+import cats.data.{Ior, NonEmptyList => Nel}
 import cats.syntax.functor._
 import cats.syntax.applicative._
 
-sealed trait BsonReaderResult[+A] extends Product with Serializable
+sealed trait BsonReaderResult[+A] extends Product with Serializable { self =>
+  def toIor: Ior[Nel[BsonError], A] = self match {
+    case BsonReaderResult.Success(value)                => Ior.right(value)
+    case BsonReaderResult.Failure(errors)               => Ior.left(errors)
+    case BsonReaderResult.PartialSuccess(errors, value) => Ior.both(errors, value)
+  }
+}
 
 object BsonReaderResult {
   final case class Success[+A](value: A) extends BsonReaderResult[A]
