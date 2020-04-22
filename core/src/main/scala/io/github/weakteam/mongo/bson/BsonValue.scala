@@ -26,7 +26,7 @@ object BsonValue {
   final case class BsonDate(value: Long) extends BsonValue
   final case class BsonBinary(subtype: BsonSubtype, value: Array[Byte]) extends BsonValue
   final case class BsonArray(value: List[BsonValue]) extends BsonValue
-  final case class BsonDocument(value: List[(String, BsonValue)]) extends BsonValue
+  final case class BsonDocument(value: Map[String, BsonValue]) extends BsonValue
 
   implicit lazy val bsonValueShowInstance: Show[BsonValue] = Show.show[BsonValue] {
     case BsonNull                      => "BsonNull"
