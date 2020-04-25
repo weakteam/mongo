@@ -1,85 +1,57 @@
 package io.github.weakteam.mongo.bson
 
+import cats.{Eval, Monoid}
+import cats.data.NonEmptyList
 import cats.syntax.either._
-import io.github.weakteam.mongo.bson.BsonError._
-import io.github.weakteam.mongo.bson.BsonPath._
-import io.github.weakteam.mongo.bson.BsonReaderResult.Failure
-import io.github.weakteam.mongo.bson.BsonValue.{BsonArray, BsonDocument}
+import io.github.weakteam.mongo.bson.BsonPathNode._
 
 import scala.util.matching.Regex
 
-sealed trait BsonPath extends Product with Serializable { self =>
-  def parent: Option[BsonPath]
+final case class BsonPath private (paths: NonEmptyList[BsonPathNode]) { self =>
+  def \@(id: Int): BsonPath             = BsonPath(IdBsonPathNode(id) :: paths)
+  def \(key: String): BsonPath          = BsonPath(KeyBsonPathNode(key) :: paths)
+  def \\(key: String): BsonPath         = BsonPath(RecursiveKeyBsonPathNode(key) :: paths)
+  def \?(regex: Regex): BsonPath        = BsonPath(RegexBsonPathNode(regex) :: paths)
+  def \\?(regex: Regex): BsonPath       = BsonPath(RecursiveRegexBsonPathNode(regex) :: paths)
+  def ++(bsonPath: BsonPath): BsonPath  = BsonPath(bsonPath.paths ::: paths).optimize
+  def :::(bsonPath: BsonPath): BsonPath = bsonPath ++ self
 
-  protected def readPath(bson: BsonValue): Either[BsonError, BsonValue]
+  def ::(path: BsonPathNode): BsonPath = BsonPath(path :: paths)
 
-  final def readAt(bson: BsonValue): Either[BsonError, BsonValue] = {
-    @scala.annotation.tailrec
-    def loop(
-      arg: Option[BsonPath] = Some(self),
-      acc: List[BsonPath] = Nil,
-      bson: BsonValue
-    ): Either[BsonError, BsonValue] = {
-      arg match {
-        case Some(value) => loop(value.parent, value :: acc, bson)
-        case _           => acc.foldLeft(bson.asRight[BsonError])((state, path) => state.flatMap(path.readPath))
+  private def optimize: BsonPath = {
+    BsonPath(
+      NonEmptyList
+        .fromList(paths.filterNot(_ == RootBsonPathNode))
+        .getOrElse(NonEmptyList.of(RootBsonPathNode))
+    )
+  }
+
+  def readAt(bson: BsonValue): Either[BsonErrorEntity, (BsonPath, BsonValue)] = {
+    paths
+      .foldRight(Eval.now((BsonPath.__, bson).asRight[(BsonPath, BsonError)])) {
+        case (nextNode, ev) =>
+          ev.map {
+            _.flatMap {
+              case (prev, value) =>
+                nextNode
+                  .readPath(value)
+                  .leftMap((nextNode :: prev, _))
+                  .map { case (path, v) => (prev ++ path, v) }
+            }
+          }
       }
-    }
-
-    loop(bson = bson)
+      .value
+      .leftMap { case (path, err) => BsonErrorEntity(path, self, err) }
   }
-
-  def read[A](implicit reader: BsonReader[A]): BsonReader[A] = { bson =>
-    readAt(bson) match {
-      case Left(value)  => Failure(value.withPath(this))
-      case Right(value) => reader.readBson(value)
-    }
-  }
-
-  def \(key: String): KeyBsonPath     = KeyBsonPath(key, Some(self))
-  def \?(regex: Regex): RegexBsonPath = RegexBsonPath(regex, Some(self))
 }
 
 object BsonPath {
+  def __ : BsonPath                                              = BsonPath(RootBsonPathNode)
+  def apply(path0: BsonPathNode, paths: BsonPathNode*): BsonPath = new BsonPath(NonEmptyList.of(path0, paths: _*))
 
-  final case class IdBsonPath(id: Int, parent: Option[BsonPath]) extends BsonPath { self =>
-    protected def readPath(bson: BsonValue): Either[BsonError, BsonValue] = {
-      bson match {
-        case BsonArray(value) =>
-          value.drop(id - 1).headOption.toRight(MinCountError(id, value.length, self, parent))
-        case other => Left(TypeMismatch("BsonArray", other, self, None))
-      }
-    }
+  implicit val bsonPathMonoid: Monoid[BsonPath] = new Monoid[BsonPath] {
+    def empty: BsonPath = __
+
+    def combine(x: BsonPath, y: BsonPath): BsonPath = x ++ y
   }
-
-  final case class KeyBsonPath(key: String, parent: Option[BsonPath]) extends BsonPath { self =>
-    protected def readPath(bson: BsonValue): Either[BsonError, BsonValue] = {
-      bson match {
-        case BsonDocument(value) => value.get(key).toRight(PathMismatch(self, parent))
-        case other               => Left(TypeMismatch("BsonDocument", other, self, None))
-      }
-    }
-  }
-
-  final case class RegexBsonPath(regex: Regex, parent: Option[BsonPath]) extends BsonPath { self =>
-    protected def readPath(bson: BsonValue): Either[BsonError, BsonValue] = {
-      bson match {
-        case BsonDocument(value) =>
-          value.collect { case (k, v) if regex.pattern.matcher(k).matches() => v }.toList match {
-            case head :: Nil   => Right(head)
-            case list @ _ :: _ => Left(MultipleMatches(list.length, self, None))
-            case _             => Left(ValidationError(s"No matches for $regex regex", self, None))
-          }
-        case other => Left(TypeMismatch("BsonDocument", other, self, None))
-      }
-    }
-  }
-
-  final case class EmptyBsonPath(parent: Option[BsonPath] = None) extends BsonPath {
-    protected def readPath(bson: BsonValue): Either[BsonError, BsonValue] = Right(bson)
-  }
-
-  implicit def toStringBsonPath(s: String): KeyBsonPath = KeyBsonPath(s, None)
-  implicit def toRegexBsonPath(r: Regex): RegexBsonPath = RegexBsonPath(r, None)
-
 }
