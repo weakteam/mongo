@@ -4,6 +4,7 @@ import cats.{Eval, Monoid}
 import cats.data.NonEmptyList
 import cats.syntax.either._
 import io.github.weakteam.mongo.bson.BsonPathNode._
+import io.github.weakteam.mongo.bson.BsonReaderResult._
 
 import scala.util.matching.Regex
 
@@ -14,11 +15,11 @@ final case class BsonPath private (paths: NonEmptyList[BsonPathNode]) { self =>
   def \?(regex: Regex): BsonPath        = BsonPath(RegexBsonPathNode(regex) :: paths)
   def \\?(regex: Regex): BsonPath       = BsonPath(RecursiveRegexBsonPathNode(regex) :: paths)
   def ++(bsonPath: BsonPath): BsonPath  = BsonPath(bsonPath.paths ::: paths).optimize
-  def :::(bsonPath: BsonPath): BsonPath = bsonPath ++ self
+  def :::(bsonPath: BsonPath): BsonPath = self ++ bsonPath
 
-  def ::(path: BsonPathNode): BsonPath = BsonPath(path :: paths)
+  def ::(path: BsonPathNode): BsonPath = BsonPath(path) ::: self
 
-  private def optimize: BsonPath = {
+  private[bson] def optimize: BsonPath = {
     BsonPath(
       NonEmptyList
         .fromList(paths.filterNot(_ == RootBsonPathNode))
@@ -26,8 +27,9 @@ final case class BsonPath private (paths: NonEmptyList[BsonPathNode]) { self =>
     )
   }
 
-  def readAt(bson: BsonValue): Either[BsonErrorEntity, (BsonPath, BsonValue)] = {
-    paths
+  private[bson] def readAt(bson: BsonValue): Either[BsonErrorEntity, (BsonPath, BsonValue)] = {
+    val opts = self.optimize
+    opts.paths
       .foldRight(Eval.now((BsonPath.__, bson).asRight[(BsonPath, BsonError)])) {
         case (nextNode, ev) =>
           ev.map {
@@ -41,7 +43,15 @@ final case class BsonPath private (paths: NonEmptyList[BsonPathNode]) { self =>
           }
       }
       .value
-      .leftMap { case (path, err) => BsonErrorEntity(path, self, err) }
+      .leftMap { case (path, err) => BsonErrorEntity(err, opts, path) }
+  }
+
+  def read[A](implicit R: BsonReader[A]): BsonReader[A] = { bson =>
+    readAt(bson) match {
+      case Left(err)            => Failure(err)
+      case Right((path0, bson)) => R.readBson(bson).prepath(path0)
+    }
+
   }
 }
 
@@ -52,6 +62,6 @@ object BsonPath {
   implicit val bsonPathMonoid: Monoid[BsonPath] = new Monoid[BsonPath] {
     def empty: BsonPath = __
 
-    def combine(x: BsonPath, y: BsonPath): BsonPath = x ++ y
+    def combine(x: BsonPath, y: BsonPath): BsonPath = y ::: x
   }
 }

@@ -16,7 +16,7 @@ object BsonKeyWriter {
   }
 
   trait KeyWriterSyntax {
-    implicit def toKeyWriterOps[A](key: A)(implicit wr: BsonKeyWriter[A]): KeyWriterOps =
+    implicit def toAdditionalKeyWriterOps[A](key: A)(implicit wr: BsonKeyWriter[A]): KeyWriterOps =
       new KeyWriterOps(wr.writeKey(key))
   }
 

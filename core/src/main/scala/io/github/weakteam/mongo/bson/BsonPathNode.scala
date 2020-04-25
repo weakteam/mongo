@@ -18,7 +18,11 @@ object BsonPathNode {
   final case class IdBsonPathNode(id: Int) extends BsonPathNode {
     def readPath = {
       case BsonArray(value) =>
-        value.drop(id - 1).headOption.map((toPath, _)).toRight(MinCountError(id, value.length))
+        value
+          .drop(id - 1)
+          .headOption
+          .map((toPath, _))
+          .toRight(MinCountError(id, value.length))
       case other => Left(TypeMismatch("BsonArray", other))
     }
   }
@@ -33,10 +37,10 @@ object BsonPathNode {
   final case class RegexBsonPathNode(regex: Regex) extends BsonPathNode {
     def readPath = {
       case BsonDocument(value) =>
-        value.collect { case (k, v) if k.matches(regex.regex) => v }.toList match {
-          case head :: Nil   => Right((toPath, head))
-          case list @ _ :: _ => Left(MultipleMatches(list.length))
-          case _             => Left(ValidationError(s"No matches for $regex"))
+        value.filter(_._1.matches(regex.regex)).toList match {
+          case (key, value) :: Nil => Right((KeyBsonPathNode(key).toPath, value))
+          case list @ _ :: _       => Left(MultipleMatches(list.length))
+          case _                   => Left(ValidationError(s"No matches for $regex"))
         }
       case other => Left(TypeMismatch("BsonDocument", other))
     }
