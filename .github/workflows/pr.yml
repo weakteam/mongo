@@ -1,9 +1,6 @@
-name: vicly-basic-pipeline
+name: mongo-pull-request-pipeline
 
 on:
-  push:
-    branches: [ master, develop ]
-
   pull_request:
     branches: [ master, develop ]
 
