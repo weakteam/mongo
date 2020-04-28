@@ -49,7 +49,7 @@ final case class BsonPath private (paths: NonEmptyList[BsonPathNode]) { self =>
   def read[A](implicit R: BsonReader[A]): BsonReader[A] = { bson =>
     readAt(bson) match {
       case Left(err)            => Failure(err)
-      case Right((path0, bson)) => R.readBson(bson).prepath(path0)
+      case Right((path0, bson)) => R.readBson(bson).withPath(path0)
     }
 
   }

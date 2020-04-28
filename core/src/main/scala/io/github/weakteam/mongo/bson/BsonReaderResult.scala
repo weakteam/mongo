@@ -13,10 +13,10 @@ sealed trait BsonReaderResult[+A] extends Product with Serializable { self =>
     case BsonReaderResult.PartialSuccess(errors, _, value) => Ior.both(errors, value)
   }
 
-  def prepath(pre: BsonPath): BsonReaderResult[A] = self match {
-    case Success(value, path1)                => Success(value, path1 ::: pre)
-    case PartialSuccess(errors, path1, value) => PartialSuccess(errors.map(_.prepath(pre)), pre ::: path1, value)
-    case Failure(error)                       => Failure(error.map(_.prepath(pre)))
+  def withPath(pre: BsonPath): BsonReaderResult[A] = self match {
+    case Success(value, _)                => Success(value, pre)
+    case Failure(errors)                  => Failure(errors.map(_.prepath(pre)))
+    case PartialSuccess(errors, _, value) => PartialSuccess(errors.map(_.prepath(pre)), pre, value)
   }
 
   def toOption: Option[A] = self match {
