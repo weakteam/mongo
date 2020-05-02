@@ -25,7 +25,7 @@ trait BsonWriter[-T] { self =>
   def writeBson(arg: T): BsonValue
 }
 
-trait Instances {
+trait WriterInstances {
   implicit val identityWriter: BsonWriter[BsonValue] = identity(_)
   implicit val intWriter: BsonWriter[Int]            = BsonInt(_)
   implicit val stringWriter: BsonWriter[String]      = BsonString(_)
@@ -37,7 +37,7 @@ trait Instances {
   implicit val patternWriter: BsonWriter[Pattern]    = reg => BsonRegex(reg.pattern())
 }
 
-trait LowPriorityInstances {
+trait LowPriorityWriterInstances {
 
   implicit def optionWriter[A](implicit W: BsonWriter[A]): BsonWriter[Option[A]] = {
     case Some(value) => W.writeBson(value)
@@ -65,7 +65,7 @@ trait LowPriorityInstances {
   }
 }
 
-object BsonWriter extends Instances with LowPriorityInstances {
+object BsonWriter extends WriterInstances with LowPriorityWriterInstances {
   def instance[A](f: A => BsonValue): BsonWriter[A] = f(_)
 
   implicit val bsonWriterContravariantInstance: Contravariant[BsonWriter] = new Contravariant[BsonWriter] {

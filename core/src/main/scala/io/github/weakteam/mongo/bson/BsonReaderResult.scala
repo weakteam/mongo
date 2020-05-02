@@ -39,7 +39,7 @@ object BsonReaderResult {
     def apply(err: BsonErrorEntity, rest: BsonErrorEntity*): Failure = new Failure(Nel.of(err, rest: _*))
   }
 
-  final case class PartialSuccess[+A](errors: Nel[BsonErrorEntity], path: BsonPath, value: A)
+  final case class PartialSuccess[+A](errors: Nel[BsonErrorEntity], path: BsonPath = BsonPath.__, value: A)
     extends BsonReaderResult[A]
 
   implicit val bsonReaderResultApplicativeErrorInstance: ApplicativeError[BsonReaderResult, Nel[BsonErrorEntity]] =
